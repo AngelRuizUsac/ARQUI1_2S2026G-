@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Edificio Inteligente — Panel de Control</title>
+<link rel="stylesheet" href="styles.css" />
+<script src="https://unpkg.com/mqtt/dist/mqtt.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
+</head>
+<body>
+
+<header>
+  <div class="title">
+    <small>SISTEMA IOT - RASPBERRY PI ARM64</small>
+    <h1>Edificio Inteligente - Panel de Control</h1>
+  </div>
+  <div style="display:flex;align-items:center;gap:16px;">
+    <span style="font-family:var(--mono);font-size:12px;color:var(--ink-muted);">
+      <span class="conn-dot" id="connDot"></span><span id="connText">MQTT desconectado</span>
+    </span>
+    <div class="status-badge NORMAL" id="globalStatus">NORMAL</div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ZONAS -->
+  <section class="frame">
+    <h2>Zonas de la maqueta</h2>
+    <div class="zones">
+      <div class="zone">
+        <h3>Entrada principal</h3>
+        <div class="row">Distancia <span class="v" id="z-dist">—</span></div>
+        <div class="row">Puerta <span class="v" id="z-puerta">—</span></div>
+      </div>
+      <div class="zone">
+        <h3>Área interior</h3>
+        <div class="row">Temperatura <span class="v" id="z-temp">—</span></div>
+        <div class="row">Humedad <span class="v" id="z-hum">—</span></div>
+        <div class="row">Luz <span class="v" id="z-luz">—</span></div>
+        <div class="row">Luces <span class="v" id="z-luces">—</span></div>
+      </div>
+      <div class="zone">
+        <h3>Sala de control / emergencia</h3>
+        <div class="row">Gas / humo <span class="v" id="z-gas">—</span></div>
+        <div class="row">Ventilador <span class="v" id="z-vent">—</span></div>
+        <div class="row">Alarma <span class="v" id="z-alarma">—</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PANEL PRINCIPAL -->
+  <section class="frame">
+    <h2>Panel principal — lecturas actuales</h2>
+    <div class="readouts">
+      <div class="readout"><div class="label">Temperatura</div><div class="value" id="r-temp">--<span class="unit">°C</span></div></div>
+      <div class="readout"><div class="label">Humedad</div><div class="value" id="r-hum">--<span class="unit">%</span></div></div>
+      <div class="readout"><div class="label">Gas / humo</div><div class="value" id="r-gas">--</div></div>
+      <div class="readout"><div class="label">Distancia</div><div class="value" id="r-dist">--<span class="unit">cm</span></div></div>
+      <div class="readout"><div class="label">Nivel de luz</div><div class="value" id="r-luz">--</div></div>
+      <div class="readout"><div class="label">ARM64 · Promedio</div><div class="value" id="r-arm-avg">--</div></div>
+    </div>
+  </section>
+
+  <!-- GRAFICAS -->
+  <section class="frame">
+    <h2>Gráficas históricas (tiempo real)</h2>
+    <div class="charts-grid">
+      <div class="chart-box"><canvas id="chartTemp"></canvas></div>
+      <div class="chart-box"><canvas id="chartHum"></canvas></div>
+      <div class="chart-box"><canvas id="chartGas"></canvas></div>
+      <div class="chart-box"><canvas id="chartDist"></canvas></div>
+      <div class="chart-box"><canvas id="chartLuz"></canvas></div>
+      <div class="chart-box"><canvas id="chartArm"></canvas></div>
+    </div>
+  </section>
+
+  <!-- CONTROLES -->
+  <section class="frame">
+    <h2>Controles remotos</h2>
+    <div class="controls">
+      <button onclick="sendCmd('puerta','abrir')">Abrir puerta</button>
+      <button onclick="sendCmd('puerta','cerrar')">Cerrar puerta</button>
+      <button onclick="sendCmd('luces','encender')">Encender luces</button>
+      <button onclick="sendCmd('luces','apagar')">Apagar luces</button>
+      <button onclick="sendCmd('modo_luces','automatico')">Modo automático</button>
+      <button onclick="sendCmd('modo_luces','manual')">Modo manual</button>
+      <button onclick="sendCmd('ventilador','encender')">Activar ventilador</button>
+      <button onclick="sendCmd('ventilador','apagar')">Desactivar ventilador</button>
+      <button class="danger" onclick="sendCmd('alarma','silenciar')">Silenciar alarma</button>
+      <button class="danger" onclick="sendCmd('estado','restablecer')">Restablecer emergencia</button>
+    </div>
+  </section>
+
+  <!-- HISTORIAL -->
+  <section class="frame">
+    <h2>Historial (MongoDB Atlas)</h2>
+    <div class="hist-grid">
+      <div>
+        <h3 style="font-size:12px;color:var(--ink-muted);">Últimos eventos</h3>
+        <div class="scroll"><table id="tblEvents"><thead><tr><th>Hora</th><th>Evento</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div>
+        <h3 style="font-size:12px;color:var(--ink-muted);">Últimos comandos</h3>
+        <div class="scroll"><table id="tblCommands"><thead><tr><th>Hora</th><th>Comando</th></tr></thead><tbody></tbody></table></div>
+      </div>
+      <div>
+        <h3 style="font-size:12px;color:var(--ink-muted);">Resultados ARM64</h3>
+        <div class="scroll"><table id="tblArm"><thead><tr><th>Hora</th><th>Máx/Mín/Prom</th></tr></thead><tbody></tbody></table></div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<button class="config-toggle" onclick="toggleConfig()">CONFIGURAR CONEXIÓN</button>
+<div class="config-panel" id="configPanel">
+  <strong style="font-size:12px;">Conexión MQTT (EMQX)</strong>
+  <label>Broker WebSocket URL (wss://host:puerto/mqtt)</label>
+  <input id="cfg-mqtt-url" placeholder="wss://broker.emqx.io:8084/mqtt" />
+  <label>Usuario</label>
+  <input id="cfg-mqtt-user" />
+  <label>Contraseña</label>
+  <input id="cfg-mqtt-pass" type="password" />
+  <label>Prefijo de topics (ej. edificio, o IDENTIFICADORUNICO/edificio)</label>
+  <input id="cfg-mqtt-prefix" placeholder="edificio" />
+
+  <strong style="font-size:12px;display:block;margin-top:16px;">MongoDB Atlas Data API</strong>
+  <label>Endpoint Data API</label>
+  <input id="cfg-mongo-url" placeholder="https://data.mongodb-api.com/app/APP_ID/endpoint/data/v1" />
+  <label>API Key</label>
+  <input id="cfg-mongo-key" type="password" />
+  <label>Data Source (cluster)</label>
+  <input id="cfg-mongo-source" placeholder="Cluster0" />
+  <label>Database</label>
+  <input id="cfg-mongo-db" placeholder="edificio_iot" />
+
+  <button class="save-btn" onclick="saveConfig()">Guardar y conectar</button>
+</div>
+
+<script src="script.js"></script>
+</body>
+</html>
