@@ -1,0 +1,39 @@
+# PYTHON
+# Entorno virtual
+PYTHON/venv/
+venv/
+
+# Archivos temporales de Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Variables de entorno
+.env
+*.env
+
+# ARM64
+
+# Archivos objeto
+*.o
+
+# Ejecutables generados
+*.out
+*.elf
+*.exe
+
+# Ejecutable del proyecto ARM64
+ARM64/programa
+
+
+# Archivos generados durante la ejecución
+ARM64/datos.txt
+ARM64/resultado.txt
+
+# VS Code
+.vscode/
+
+
+.DS_Store
+Thumbs.db
