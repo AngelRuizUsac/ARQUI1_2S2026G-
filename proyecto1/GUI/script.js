@@ -1,6 +1,3 @@
-/* =========================================================
-   CONFIG — guardado en localStorage del navegador
-   ========================================================= */
 const CFG_KEY = 'edificio_iot_cfg';
 
 function loadConfig(){
@@ -41,9 +38,7 @@ function saveConfig(){
   window._histInterval = setInterval(()=>refreshHistorial(cfg), 15000);
 }
 
-/* =========================================================
-   GRAFICAS — Chart.js
-   ========================================================= */
+/*GRAFICAS*/
 function makeChart(ctx,label,color){
   return new Chart(ctx,{
     type:'line',
@@ -77,9 +72,7 @@ function pushPoint(chart,value){
   chart.update('none');
 }
 
-/* =========================================================
-   MQTT — conexión por WebSocket a EMQX
-   ========================================================= */
+/*MQTT — conexión por WebSocket a EMQX*/
 let mqttClient = null;
 
 function setConn(on,text){
@@ -112,7 +105,7 @@ function connectMqtt(cfg){
   mqttClient.on('message',(topic,message)=>{
     const text = message.toString();
     let val = text;
-    try{ val = JSON.parse(text); }catch(e){ /* texto plano */ }
+    try{ val = JSON.parse(text); }catch(e){ }
     handleMessage(topic.replace(p+'/',''), val, text);
   });
 }
@@ -164,16 +157,13 @@ function handleArmResult(val){
   if(typeof val === 'object' && val !== null){
     avg = val.avg ?? val.AVG ?? val.promedio;
   } else {
-    // formato tipo "MAX=27;MIN=21;AVG=24;COUNT=4"
     const str = String(val);
     avg = (str.match(/AVG=(-?\d+)/i)||[])[1];
   }
   if(avg !== undefined){ set('r-arm-avg',avg); pushPoint(charts.arm,Number(avg)); }
 }
 
-/* =========================================================
-   CONTROLES REMOTOS — publican al topic de comandos
-   ========================================================= */
+/*CONTROLES REMOTOS — publican al topic de comandos*/
 function sendCmd(action,value){
   const cfg = loadConfig();
   if(!mqttClient || !mqttClient.connected){ alert('MQTT no está conectado. Revisá la configuración.'); return; }
@@ -182,9 +172,7 @@ function sendCmd(action,value){
   mqttClient.publish(topic,payload);
 }
 
-/* =========================================================
-   MONGODB ATLAS DATA API — historial
-   ========================================================= */
+/*MONGODB ATLAS DATA API — historial*/
 async function dataApiFind(cfg, collection, limit=8, sortField='timestamp'){
   if(!cfg.mongoUrl || !cfg.mongoKey) return [];
   try{
@@ -231,9 +219,7 @@ function fmtTs(ts){
   try{ return new Date(ts).toLocaleTimeString(); }catch(e){ return String(ts); }
 }
 
-/* =========================================================
-   INIT
-   ========================================================= */
+/*INIT*/
 window.addEventListener('DOMContentLoaded',()=>{
   const cfg = loadConfig();
   fillConfigForm(cfg);
